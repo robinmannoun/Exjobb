@@ -50,6 +50,7 @@ dummy_MV<-t(df$MV)*dummies
 df<-data.frame(df,dummy_MV)
 df<-data.frame(df,dummy_vol)
 df<-data.frame(df,dummy_PTB)
+df<-df[1:20791,]
 
 sg<- df[5:24]
 sg = subset(sg,select = -c(ID,EPS))
@@ -171,7 +172,8 @@ SSE=sum(residuals(m1)**2)
 #Alternatively
 1-SSE/SSyy
 
-m_1<-panelAR(pc1~IP,data=df,panelVar = "ID",timeVar = "Month", autoCorr="ar1",panelCorrMethod = "pcse")
+p1<-plm(pc1~IP,data=df,model="pooling",index=c("ID","Month"))
+summary(p1)
 
 m2<-plm(pc1~UR,data=df,index=c("ID","Month"))
 summary(m2)
@@ -926,7 +928,7 @@ names(df2) <- c("resid", "firm", "month")
 plot(df2$resid,type = "l")
 
 
-pred.20 <- data.frame(df[1:20791,], 
+pred.20 <- data.frame(df, 
                       pred = predict(mf8, interval = "prediction"),
                       conf = predict(mf8, interval = "confidence"),
                       e = df2$resid)
@@ -949,4 +951,58 @@ hist20 <- ggplot(data = pred.20, aes(x = e)) +
   geom_histogram(bins = 100) + 
   labs(y = "Frequency", x = "Residuals")
 
+tidy<-tidy(mf8)
+aug<-augment(mf8, data = df)
+glance<-glance(mf8)
 
+require(ggplot2)
+
+ind<-seq(1, 20791, by=1)
+
+ggplot(aug, aes(x=ind)) +                    # basic graphical object
+  geom_line(aes(y=.fitted), colour="red") +  # first layer
+  geom_line(aes(y=pc1), colour="blue")+  # second layer
+labs(y = "Actual and fitted")
+
+ggplot(aug, aes(x=ind)) +                    # basic graphical object
+  geom_line(aes(y=pc1), colour="blue")+  # second layer
+  labs(y = "PC1")
+
+
+#############################################Pooled OLS models#####################################################
+pf8 <- plm(pc1~UR+VSTOXX+REPO+INF+ .data_2 + .data_3 + .data_4 + .data_5 + .data_6
+           + .data_7 + .data_8 + .data_9 + .data_10 + .data_11 + .data_12 + .data_13 + .data_14 +
+             .data_15 + .data_16 + .data_17 + .data_18 + .data_19 + .data_20 + .data_21 + .data_22+.data_23+.data_24+
+             .data_25+.data_26+.data_27+.data_28+.data_29+.data_30+
+             .data_31+.data_32+.data_33+.data_34+.data_35+.data_36+.data_37+.data_38+.data_39+.data_40+
+             .data_41+.data_42+.data_43+.data_44+.data_45+.data_46+.data_47+.data_48+.data_49+.data_50+
+             .data_51+.data_52+.data_53+.data_54+.data_55+.data_56+.data_57+.data_58+.data_59+
+             .data_60+.data_61+.data_62+.data_63+.data_64+.data_65+.data_66+.data_67+.data_68+.data_69+
+             .data_70+.data_71+.data_72+.data_73+.data_74+.data_75+.data_76+.data_77+.data_78+.data_79 + .data_80 +
+             .data_81 + .data_82 + .data_83 + .data_84 + .data_85 + .data_86 + .data_87 + .data_88 + .data_89
+           
+           + .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
+             .data_6.2+ .data_7.2 + .data_8.2 + .data_9.2 + .data_10.2 + .data_11.2 + .data_12.2 + .data_13.2 + .data_14.2 +
+             .data_15.2 + .data_16.2 + .data_17.2 + .data_18.2 + .data_19.2 + .data_20.2 + .data_21.2 + .data_22.2+.data_23.2+.data_24.2+
+             .data_25.2+.data_26.2+.data_27.2+.data_28.2+.data_29.2+.data_30.2+
+             .data_31.2+.data_32.2+.data_33.2+.data_34.2+.data_35.2+.data_36.2+.data_37.2+.data_38.2+.data_39.2+.data_40.2+
+             .data_41.2+.data_42.2+.data_43.2+.data_44.2+.data_45.2+.data_46.2+.data_47.2+.data_48.2+.data_49.2+.data_50.2+
+             .data_51.2+.data_52.2+.data_53.2+.data_54.2+.data_55.2+.data_56.2+.data_57.2+.data_58.2+.data_59.2+
+             .data_60.2+.data_61.2+.data_62.2+.data_63.2+.data_64.2+.data_65.2+.data_66.2+.data_67.2+.data_68.2+.data_69.2+
+             .data_70.2+.data_71.2+.data_72.2+.data_73.2+.data_74.2+.data_75.2+.data_76.2+.data_77.2+.data_78.2+.data_79.2 + .data_80.2 +
+             .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2
+           
+           +.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
+             .data_6.1+ .data_7.1 + .data_8.1 + .data_9.1 + .data_10.1 + .data_11.1 + .data_12.1 + .data_13.1 + .data_14.1 +
+             .data_15.1 + .data_16.1 + .data_17.1 + .data_18.1 + .data_19.1 + .data_20.1 + .data_21.1 + .data_22.1+.data_23.1+.data_24.1+
+             .data_25.1+.data_26.1+.data_27.1+.data_28.1+.data_29.1+.data_30.1+
+             .data_31.1+.data_32.1+.data_33.1+.data_34.1+.data_35.1+.data_36.1+.data_37.1+.data_38.1+.data_39.1+.data_40.1+
+             .data_41.1+.data_42.1+.data_43.1+.data_44.1+.data_45.1+.data_46.1+.data_47.1+.data_48.1+.data_49.1+.data_50.1+
+             .data_51.1+.data_52.1+.data_53.1+.data_54.1+.data_55.1+.data_56.1+.data_57.1+.data_58.1+.data_59.1+
+             .data_60.1+.data_61.1+.data_62.1+.data_63.1+.data_64.1+.data_65.1+.data_66.1+.data_67.1+.data_68.1+.data_69.1+
+             .data_70.1+.data_71.1+.data_72.1+.data_73.1+.data_74.1+.data_75.1+.data_76.1+.data_77.1+.data_78.1+.data_79.1 + .data_80.1 +
+             .data_81.1 + .data_82.1 + .data_83.1 + .data_84.1 + .data_85.1 + .data_86.1 + .data_87.1 + .data_88.1 + .data_89.1
+           
+           , data = df,model="pooling", index=c("ID","Month"))
+summary(pf8)
+coeftest(pf8, vcov=vcovHC(pf8,type="sss",cluster="group"))
