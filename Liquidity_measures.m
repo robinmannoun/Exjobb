@@ -82,7 +82,7 @@ pl= pl_month.min_PL;
 LHH_ = (ph-pl)./pl;
 
 LHH = LHH_./tr;
-
+LHH(6609) = LHH(6610);
 
 %% Amihud Illiquidity
 
@@ -120,6 +120,9 @@ end
 
 %% All data
 
-monthly_data = table(new_col,tr,zero_trading,bid_ask,LHH,monthly_spreadPercentage.mean_SpreadPercentage, monthly_illiq.mean_illiq);
+monthly_data = table(new_col,tr,zero_trading,bid_ask,monthly_spreadPercentage.mean_SpreadPercentage,LHH, monthly_illiq.mean_illiq);
 
-monthly_data.Properties.VariableNames = {'Month_count' 'TurnoverRatio' 'Zero_Trading_Days' 'Bid_Ask' 'LHH' 'Spread_Percentage' 'Illiquidity'};
+monthly_data.Properties.VariableNames = {'Month_count' 'TurnoverRatio' 'Zero_Trading_Days' 'Bid_Ask' 'Spread_Percentage' 'LHH' 'Illiquidity'};
+
+monthly_data(21005:21240,:)= [];
+monthly_data(17465:17700,:)= [];

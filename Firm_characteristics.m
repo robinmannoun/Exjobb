@@ -42,4 +42,5 @@ firm_data.VOL = vol;
 firm_data.MV = monthly_MV.mean_MV;
 %firm_data.PE = monthly_P.mean_P./firm_data.EPS;
 
-
+firm_data(21005:21240,:)= [];
+firm_data(17465:17700,:)= [];

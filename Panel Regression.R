@@ -5,6 +5,7 @@ library(panelAR)
 library(dplyr)
 library(Hmisc)
 library(fastDummies)
+library(broom)
 
 data <- all_data_rensad_3
 pc<-pc_7[,1:3]
@@ -28,25 +29,21 @@ df$Yield_Spread<- df$Y10-df$M3
 
 df = subset(df,select = -c(Y10,M3))
 
-# df$size<-character()
-# df$size[df$MV>4e+10]<-"Large"
-# df$size[df$MV<1.5e+9]<-"Small"
-# df$size[1.5e+9<df$MV & df$MV<4e+10]<-"Mid"
-# df$size<-as.factor(df$size)
-
-#rownames(df) <- make.names(df$size, unique = TRUE)
+df<-df %>% 
+  group_by(ID) %>% 
+  slice(1:(n()-1))
 
 contrasts(df$size)
 
 corr<-cor(df$SDeposit,df$REPO)
 corr<-cor(df$VSTOXX,df$CBOE)
 
-dummies<-dummy_cols(df$ID,remove_first_dummy = TRUE, remove_selected_columns =TRUE)
-
-dummy_vol<-t(df$VOL)*dummies
-dummy_PTB<-t(df$PTB)*dummies
-dummy_MV<-t(df$MV)*dummies
-
+# dummies<-dummy_cols(df$ID,remove_first_dummy = TRUE, remove_selected_columns =TRUE)
+# 
+# dummy_vol<-t(df$VOL)*dummies
+# dummy_PTB<-t(df$PTB)*dummies
+# dummy_MV<-t(df$MV)*dummies
+# 
 df<-data.frame(df,dummy_MV)
 df<-data.frame(df,dummy_vol)
 df<-data.frame(df,dummy_PTB)
@@ -155,7 +152,7 @@ eps<-df$EPS
 
 ##############################################MACRO VARIABLES#######################################################################
 
-#########################Univariate##################################
+#########################Univariate FE and OLS##################################
 
 m1<-plm(pc1~IP,data=df,model="within",index=c("ID","Month"))
 summary(m1)
@@ -174,30 +171,58 @@ SSE=sum(residuals(m1)**2)
 
 p1<-plm(pc1~IP,data=df,model="pooling",index=c("ID","Month"))
 summary(p1)
+coeftest(p1, vcov=vcovHC(p1,type="sss",cluster="group"))
 
 m2<-plm(pc1~UR,data=df,index=c("ID","Month"))
 summary(m2)
 coeftest(m2, vcov=vcovHC(m2,type="sss",cluster="group"))
 
+p2<-plm(pc1~UR,data=df,model="pooling",index=c("ID","Month"))
+summary(p2)
+coeftest(p2, vcov=vcovHC(p2,type="sss",cluster="group"))
+
 m3<-plm(pc1~INF,data=df,index=c("ID","Month"))
 summary(m3)
 coeftest(m3, vcov=vcovHC(m3,type="sss",cluster="group"))
+
+p3<-plm(pc1~INF,data=df,model="pooling",index=c("ID","Month"))
+summary(p3)
+coeftest(p3, vcov=vcovHC(p3,type="sss",cluster="group"))
 
 m4<-plm(pc1~SDeposit,data=df,index=c("ID","Month"))
 summary(m4)
 coeftest(m4, vcov=vcovHC(m4,type="sss",cluster="group"))
 
+p4<-plm(pc1~SDeposit,data=df,model="pooling",index=c("ID","Month"))
+summary(p4)
+coeftest(p4, vcov=vcovHC(p4,type="sss",cluster="group"))
+
 m5<-plm(pc1~VSTOXX,data=df,index=c("ID","Month"))
 summary(m5)
 coeftest(m5, vcov=vcovHC(m5,type="sss",cluster="group"))
+
+p5<-plm(pc1~VSTOXX,data=df,model="pooling",index=c("ID","Month"))
+summary(p5)
+coeftest(p5, vcov=vcovHC(p5,type="sss",cluster="group"))
 
 m6<-plm(pc1~CBOE,data=df,index=c("ID","Month"))
 summary(m6)
 coeftest(m6, vcov=vcovHC(m6,type="sss",cluster="group"))
 
+p6<-plm(pc1~CBOE,data=df,model="pooling",index=c("ID","Month"))
+summary(p6)
+coeftest(p6, vcov=vcovHC(p6,type="sss",cluster="group"))
+
+
 m7<-plm(pc1~REPO,data=df,index=c("ID","Month"))
 summary(m7)
 coeftest(m7, vcov=vcovHC(m7,type="sss",cluster="group"))
+
+p7<-plm(pc1~REPO,data=df,model="pooling",index=c("ID","Month"))
+summary(p7)
+coeftest(p7, vcov=vcovHC(p7,type="sss",cluster="group"))
+
+
 woodridge7<-pwartest(m7)
 # m8<-plm(pc1~OMXS_Vol,data=df,index=c("ID","Month"))
 # summary(m8)
@@ -205,6 +230,11 @@ woodridge7<-pwartest(m7)
 m9<-plm(pc1~Yield_Spread,data=df,index=c("ID","Month"))
 summary(m9)
 coeftest(m9, vcov=vcovHC(m9,type="sss",cluster="group"))
+
+p9<-plm(pc1~Yield_Spread,data=df,model="pooling",index=c("ID","Month"))
+summary(p9)
+coeftest(p9, vcov=vcovHC(p9,type="sss",cluster="group"))
+
 
 ########################Bivariate#####################################
 
@@ -251,7 +281,7 @@ partial<-pFtest(m21,m20)
 
 ####################################FIRM SPECIFIC###################################################################
 
-f1<-plm(pc1~ .data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
+f1<-plm(pc1~  .data_2 + .data_3 + .data_4 + .data_5 + .data_6
 + .data_7 + .data_8 + .data_9 + .data_10 + .data_11 + .data_12 + .data_13 + .data_14 +
   .data_15 + .data_16 + .data_17 + .data_18 + .data_19 + .data_20 + .data_21 + .data_22+.data_23+.data_24+
   .data_25+.data_26+.data_27+.data_28+.data_29+.data_30+
@@ -260,11 +290,12 @@ f1<-plm(pc1~ .data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
   .data_51+.data_52+.data_53+.data_54+.data_55+.data_56+.data_57+.data_58+.data_59+
   .data_60+.data_61+.data_62+.data_63+.data_64+.data_65+.data_66+.data_67+.data_68+.data_69+
   .data_70+.data_71+.data_72+.data_73+.data_74+.data_75+.data_76+.data_77+.data_78+.data_79 + .data_80 +
-  .data_81 + .data_82 + .data_83 + .data_84 + .data_85 + .data_86 + .data_87 + .data_88 + .data_89,data=df,model = "within",index=c("ID","Month"))
+  .data_81 + .data_82 + .data_83 + .data_84 + .data_85 + .data_86 + .data_87 + .data_88 + .data_89,data=df,model = "pooling",index=c("ID","Month"))
 
 summary(f1)
+Ecoeftest(f1, vcov=vcovHC(f1,type="sss",cluster="group"))
 
-f2<-plm(pc1~ + df$.data_1.2+ .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
+f2<-plm(pc1~  .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
           .data_6.2+ .data_7.2 + .data_8.2 + .data_9.2 + .data_10.2 + .data_11.2 + .data_12.2 + .data_13.2 + .data_14.2 +
           .data_15.2 + .data_16.2 + .data_17.2 + .data_18.2 + .data_19.2 + .data_20.2 + .data_21.2 + .data_22.2+.data_23.2+.data_24.2+
           .data_25.2+.data_26.2+.data_27.2+.data_28.2+.data_29.2+.data_30.2+
@@ -273,11 +304,11 @@ f2<-plm(pc1~ + df$.data_1.2+ .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 +
           .data_51.2+.data_52.2+.data_53.2+.data_54.2+.data_55.2+.data_56.2+.data_57.2+.data_58.2+.data_59.2+
           .data_60.2+.data_61.2+.data_62.2+.data_63.2+.data_64.2+.data_65.2+.data_66.2+.data_67.2+.data_68.2+.data_69.2+
           .data_70.2+.data_71.2+.data_72.2+.data_73.2+.data_74.2+.data_75.2+.data_76.2+.data_77.2+.data_78.2+.data_79.2 + .data_80.2 +
-          .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2,data=df,model = "within",index=c("ID","Month"))
+          .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2,data=df,model = "pooling",index=c("ID","Month"))
 
 summary(f2)
 
-f3<-plm(pc1~.data_1.1+.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
+f3<-plm(pc1~.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
           .data_6.1+ .data_7.1 + .data_8.1 + .data_9.1 + .data_10.1 + .data_11.1 + .data_12.1 + .data_13.1 + .data_14.1 +
           .data_15.1 + .data_16.1 + .data_17.1 + .data_18.1 + .data_19.1 + .data_20.1 + .data_21.1 + .data_22.1+.data_23.1+.data_24.1+
           .data_25.1+.data_26.1+.data_27.1+.data_28.1+.data_29.1+.data_30.1+
@@ -287,7 +318,7 @@ f3<-plm(pc1~.data_1.1+.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 +
           .data_60.1+.data_61.1+.data_62.1+.data_63.1+.data_64.1+.data_65.1+.data_66.1+.data_67.1+.data_68.1+.data_69.1+
           .data_70.1+.data_71.1+.data_72.1+.data_73.1+.data_74.1+.data_75.1+.data_76.1+.data_77.1+.data_78.1+.data_79.1 + .data_80.1 +
           .data_81.1 + .data_82.1 + .data_83.1 + .data_84.1 + .data_85.1 + .data_86.1 + .data_87.1 + .data_88.1 + .data_89.1
-        , data = df,model="within", index=c("ID","Month"))
+        , data = df,model="pooling", index=c("ID","Month"))
 
 summary(f3)
 
@@ -337,7 +368,7 @@ f5<-plm(pc1~.data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
 
 summary(f5)
 
-f6<-plm(pc1~ + df$.data_1.2+ .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
+f6<-plm(pc1~  .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
   .data_6.2+ .data_7.2 + .data_8.2 + .data_9.2 + .data_10.2 + .data_11.2 + .data_12.2 + .data_13.2 + .data_14.2 +
   .data_15.2 + .data_16.2 + .data_17.2 + .data_18.2 + .data_19.2 + .data_20.2 + .data_21.2 + .data_22.2+.data_23.2+.data_24.2+
   .data_25.2+.data_26.2+.data_27.2+.data_28.2+.data_29.2+.data_30.2+
@@ -346,7 +377,7 @@ f6<-plm(pc1~ + df$.data_1.2+ .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 +
   .data_51.2+.data_52.2+.data_53.2+.data_54.2+.data_55.2+.data_56.2+.data_57.2+.data_58.2+.data_59.2+
   .data_60.2+.data_61.2+.data_62.2+.data_63.2+.data_64.2+.data_65.2+.data_66.2+.data_67.2+.data_68.2+.data_69.2+
   .data_70.2+.data_71.2+.data_72.2+.data_73.2+.data_74.2+.data_75.2+.data_76.2+.data_77.2+.data_78.2+.data_79.2 + .data_80.2 +
-  .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2+.data_1.1+.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
+  .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2+.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
     .data_6.1+ .data_7.1 + .data_8.1 + .data_9.1 + .data_10.1 + .data_11.1 + .data_12.1 + .data_13.1 + .data_14.1 +
     .data_15.1 + .data_16.1 + .data_17.1 + .data_18.1 + .data_19.1 + .data_20.1 + .data_21.1 + .data_22.1+.data_23.1+.data_24.1+
     .data_25.1+.data_26.1+.data_27.1+.data_28.1+.data_29.1+.data_30.1+
@@ -361,7 +392,7 @@ f6<-plm(pc1~ + df$.data_1.2+ .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 +
 summary(f6)
 
 
-f7<-plm(pc1~ .data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
+f7<-plm(pc1~ .data_2 + .data_3 + .data_4 + .data_5 + .data_6
    + .data_7 + .data_8 + .data_9 + .data_10 + .data_11 + .data_12 + .data_13 + .data_14 +
      .data_15 + .data_16 + .data_17 + .data_18 + .data_19 + .data_20 + .data_21 + .data_22+.data_23+.data_24+
      .data_25+.data_26+.data_27+.data_28+.data_29+.data_30+
@@ -372,7 +403,7 @@ f7<-plm(pc1~ .data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
      .data_70+.data_71+.data_72+.data_73+.data_74+.data_75+.data_76+.data_77+.data_78+.data_79 + .data_80 +
      .data_81 + .data_82 + .data_83 + .data_84 + .data_85 + .data_86 + .data_87 + .data_88 + .data_89
    
-   + df$.data_1.2+ .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
+   +  .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
      .data_6.2+ .data_7.2 + .data_8.2 + .data_9.2 + .data_10.2 + .data_11.2 + .data_12.2 + .data_13.2 + .data_14.2 +
      .data_15.2 + .data_16.2 + .data_17.2 + .data_18.2 + .data_19.2 + .data_20.2 + .data_21.2 + .data_22.2+.data_23.2+.data_24.2+
      .data_25.2+.data_26.2+.data_27.2+.data_28.2+.data_29.2+.data_30.2+
@@ -383,7 +414,7 @@ f7<-plm(pc1~ .data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
      .data_70.2+.data_71.2+.data_72.2+.data_73.2+.data_74.2+.data_75.2+.data_76.2+.data_77.2+.data_78.2+.data_79.2 + .data_80.2 +
      .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2
    
-   +.data_1.1+.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
+   +.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
      .data_6.1+ .data_7.1 + .data_8.1 + .data_9.1 + .data_10.1 + .data_11.1 + .data_12.1 + .data_13.1 + .data_14.1 +
      .data_15.1 + .data_16.1 + .data_17.1 + .data_18.1 + .data_19.1 + .data_20.1 + .data_21.1 + .data_22.1+.data_23.1+.data_24.1+
      .data_25.1+.data_26.1+.data_27.1+.data_28.1+.data_29.1+.data_30.1+
@@ -394,7 +425,7 @@ f7<-plm(pc1~ .data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
      .data_70.1+.data_71.1+.data_72.1+.data_73.1+.data_74.1+.data_75.1+.data_76.1+.data_77.1+.data_78.1+.data_79.1 + .data_80.1 +
      .data_81.1 + .data_82.1 + .data_83.1 + .data_84.1 + .data_85.1 + .data_86.1 + .data_87.1 + .data_88.1 + .data_89.1
    
-   , data = df,model="within", index=c("ID","Month"))
+   , data = df,model="pooling", index=c("ID","Month"))
 
 summary(f7)
 
@@ -846,86 +877,110 @@ par(mfrow=c(2,1))
 plot(fit[1:236])
 plot(df$pc1[1:236])
 
-mf8 <- plm(pc1~UR+VSTOXX+REPO+INF+ .data_1 + .data_2 + .data_3 + .data_4 + .data_5 + .data_6
-           + .data_7 + .data_8 + .data_9 + .data_10 + .data_11 + .data_12 + .data_13 + .data_14 +
-             .data_15 + .data_16 + .data_17 + .data_18 + .data_19 + .data_20 + .data_21 + .data_22+.data_23+.data_24+
-             .data_25+.data_26+.data_27+.data_28+.data_29+.data_30+
-             .data_31+.data_32+.data_33+.data_34+.data_35+.data_36+.data_37+.data_38+.data_39+.data_40+
-             .data_41+.data_42+.data_43+.data_44+.data_45+.data_46+.data_47+.data_48+.data_49+.data_50+
-             .data_51+.data_52+.data_53+.data_54+.data_55+.data_56+.data_57+.data_58+.data_59+
-             .data_60+.data_61+.data_62+.data_63+.data_64+.data_65+.data_66+.data_67+.data_68+.data_69+
-             .data_70+.data_71+.data_72+.data_73+.data_74+.data_75+.data_76+.data_77+.data_78+.data_79 + .data_80 +
-             .data_81 + .data_82 + .data_83 + .data_84 + .data_85 + .data_86 + .data_87 + .data_88 + .data_89
-           
-           + df$.data_1.2+ .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
-             .data_6.2+ .data_7.2 + .data_8.2 + .data_9.2 + .data_10.2 + .data_11.2 + .data_12.2 + .data_13.2 + .data_14.2 +
-             .data_15.2 + .data_16.2 + .data_17.2 + .data_18.2 + .data_19.2 + .data_20.2 + .data_21.2 + .data_22.2+.data_23.2+.data_24.2+
-             .data_25.2+.data_26.2+.data_27.2+.data_28.2+.data_29.2+.data_30.2+
-             .data_31.2+.data_32.2+.data_33.2+.data_34.2+.data_35.2+.data_36.2+.data_37.2+.data_38.2+.data_39.2+.data_40.2+
-             .data_41.2+.data_42.2+.data_43.2+.data_44.2+.data_45.2+.data_46.2+.data_47.2+.data_48.2+.data_49.2+.data_50.2+
-             .data_51.2+.data_52.2+.data_53.2+.data_54.2+.data_55.2+.data_56.2+.data_57.2+.data_58.2+.data_59.2+
-             .data_60.2+.data_61.2+.data_62.2+.data_63.2+.data_64.2+.data_65.2+.data_66.2+.data_67.2+.data_68.2+.data_69.2+
-             .data_70.2+.data_71.2+.data_72.2+.data_73.2+.data_74.2+.data_75.2+.data_76.2+.data_77.2+.data_78.2+.data_79.2 + .data_80.2 +
-             .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2
-           
-           +.data_1.1+.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
-             .data_6.1+ .data_7.1 + .data_8.1 + .data_9.1 + .data_10.1 + .data_11.1 + .data_12.1 + .data_13.1 + .data_14.1 +
-             .data_15.1 + .data_16.1 + .data_17.1 + .data_18.1 + .data_19.1 + .data_20.1 + .data_21.1 + .data_22.1+.data_23.1+.data_24.1+
-             .data_25.1+.data_26.1+.data_27.1+.data_28.1+.data_29.1+.data_30.1+
-             .data_31.1+.data_32.1+.data_33.1+.data_34.1+.data_35.1+.data_36.1+.data_37.1+.data_38.1+.data_39.1+.data_40.1+
-             .data_41.1+.data_42.1+.data_43.1+.data_44.1+.data_45.1+.data_46.1+.data_47.1+.data_48.1+.data_49.1+.data_50.1+
-             .data_51.1+.data_52.1+.data_53.1+.data_54.1+.data_55.1+.data_56.1+.data_57.1+.data_58.1+.data_59.1+
-             .data_60.1+.data_61.1+.data_62.1+.data_63.1+.data_64.1+.data_65.1+.data_66.1+.data_67.1+.data_68.1+.data_69.1+
-             .data_70.1+.data_71.1+.data_72.1+.data_73.1+.data_74.1+.data_75.1+.data_76.1+.data_77.1+.data_78.1+.data_79.1 + .data_80.1 +
-             .data_81.1 + .data_82.1 + .data_83.1 + .data_84.1 + .data_85.1 + .data_86.1 + .data_87.1 + .data_88.1 + .data_89.1
-           
-           , data = df,model="within", index=c("ID","Month"))
+mf7 <- plm(pc1~MV+VOL, data = df,model="pooling", index=c("ID","Month"))
+summary(mf7)
+
+coeftest(mf7, vcov=vcovHC(mf7,type="sss",cluster="group"))
+
+mf8 <- plm(pc1~UR+VSTOXX+REPO+CBOE+Yield_Spread+IP+INF+SDeposit, data = df,model="within", index=c("ID","Month"))
 summary(mf8)
 
-mf8 <- plm(pc1~UR+VSTOXX+REPO+INF+ .data_2 + .data_3 + .data_4 + .data_5 + .data_6
-           + .data_7 + .data_8 + .data_9 + .data_10 + .data_11 + .data_12 + .data_13 + .data_14 +
-             .data_15 + .data_16 + .data_17 + .data_18 + .data_19 + .data_20 + .data_21 + .data_22+.data_23+.data_24+
-             .data_25+.data_26+.data_27+.data_28+.data_29+.data_30+
-             .data_31+.data_32+.data_33+.data_34+.data_35+.data_36+.data_37+.data_38+.data_39+.data_40+
-             .data_41+.data_42+.data_43+.data_44+.data_45+.data_46+.data_47+.data_48+.data_49+.data_50+
-             .data_51+.data_52+.data_53+.data_54+.data_55+.data_56+.data_57+.data_58+.data_59+
-             .data_60+.data_61+.data_62+.data_63+.data_64+.data_65+.data_66+.data_67+.data_68+.data_69+
-             .data_70+.data_71+.data_72+.data_73+.data_74+.data_75+.data_76+.data_77+.data_78+.data_79 + .data_80 +
-             .data_81 + .data_82 + .data_83 + .data_84 + .data_85 + .data_86 + .data_87 + .data_88 + .data_89
-           
-           + .data_2.2 + .data_3.2 + .data_4.2 + .data_5.2 + 
-             .data_6.2+ .data_7.2 + .data_8.2 + .data_9.2 + .data_10.2 + .data_11.2 + .data_12.2 + .data_13.2 + .data_14.2 +
-             .data_15.2 + .data_16.2 + .data_17.2 + .data_18.2 + .data_19.2 + .data_20.2 + .data_21.2 + .data_22.2+.data_23.2+.data_24.2+
-             .data_25.2+.data_26.2+.data_27.2+.data_28.2+.data_29.2+.data_30.2+
-             .data_31.2+.data_32.2+.data_33.2+.data_34.2+.data_35.2+.data_36.2+.data_37.2+.data_38.2+.data_39.2+.data_40.2+
-             .data_41.2+.data_42.2+.data_43.2+.data_44.2+.data_45.2+.data_46.2+.data_47.2+.data_48.2+.data_49.2+.data_50.2+
-             .data_51.2+.data_52.2+.data_53.2+.data_54.2+.data_55.2+.data_56.2+.data_57.2+.data_58.2+.data_59.2+
-             .data_60.2+.data_61.2+.data_62.2+.data_63.2+.data_64.2+.data_65.2+.data_66.2+.data_67.2+.data_68.2+.data_69.2+
-             .data_70.2+.data_71.2+.data_72.2+.data_73.2+.data_74.2+.data_75.2+.data_76.2+.data_77.2+.data_78.2+.data_79.2 + .data_80.2 +
-             .data_81.2 + .data_82.2 + .data_83.2 + .data_84.2 + .data_85.2 + .data_86.2 + .data_87.2 + .data_88.2 + .data_89.2
-           
-           +.data_2.1 + .data_3.1 + .data_4.1 + .data_5.1 + 
-             .data_6.1+ .data_7.1 + .data_8.1 + .data_9.1 + .data_10.1 + .data_11.1 + .data_12.1 + .data_13.1 + .data_14.1 +
-             .data_15.1 + .data_16.1 + .data_17.1 + .data_18.1 + .data_19.1 + .data_20.1 + .data_21.1 + .data_22.1+.data_23.1+.data_24.1+
-             .data_25.1+.data_26.1+.data_27.1+.data_28.1+.data_29.1+.data_30.1+
-             .data_31.1+.data_32.1+.data_33.1+.data_34.1+.data_35.1+.data_36.1+.data_37.1+.data_38.1+.data_39.1+.data_40.1+
-             .data_41.1+.data_42.1+.data_43.1+.data_44.1+.data_45.1+.data_46.1+.data_47.1+.data_48.1+.data_49.1+.data_50.1+
-             .data_51.1+.data_52.1+.data_53.1+.data_54.1+.data_55.1+.data_56.1+.data_57.1+.data_58.1+.data_59.1+
-             .data_60.1+.data_61.1+.data_62.1+.data_63.1+.data_64.1+.data_65.1+.data_66.1+.data_67.1+.data_68.1+.data_69.1+
-             .data_70.1+.data_71.1+.data_72.1+.data_73.1+.data_74.1+.data_75.1+.data_76.1+.data_77.1+.data_78.1+.data_79.1 + .data_80.1 +
-             .data_81.1 + .data_82.1 + .data_83.1 + .data_84.1 + .data_85.1 + .data_86.1 + .data_87.1 + .data_88.1 + .data_89.1
-           
-           , data = df,model="within", index=c("ID","Month"))
-summary(mf8)
 coeftest(mf8, vcov=vcovHC(mf8,type="sss",cluster="group"))
+
+RSS_full<-sum(residuals(mf8)^2)
+
+mf9 <- plm(pc1~UR+Yield_Spread+VSTOXX, data = df,model="within", index=c("ID","Month"))
+summary(mf9)
+coeftest(mf9, vcov=vcovHC(mf9,type="sss",cluster="group"))
+
+#vif(mf9)
+
+RSS_red<-sum(residuals(mf9)^2)
+
+pdc<-(RSS_red-RSS_full)/RSS_red
+
+plot(residuals(mf8))
+fit_fe<-fitted(mf8)
+fit_ols<-fitted(mf9)
+
+coeff<-coeftest(mf9, vcov=vcovHC(mf9,type="sss",cluster="group"))
+tidy<-tidy(coeff)
+
+write_xlsx(tidy,"all_coeff.xlsx")
+
+vif(mf8)
 woodridge<-pwartest(mf8)
 plot(residuals(mf8))
+aug<-augment(mf8, data = df)
+
+
+fit_volvo<-fit_fe[937:1169]
+fit_hm<-fit_fe[1405:1637]
+fit_nordea<-fit_fe[1639:1871]
+
+fit_sas<-fit_fe[6787:7019]
+fit_enea<-fit_fe[10288:10520]
+fit_haldex<-fit_fe[13082:13314]
+
+fit_semcon<-fit_fe[14018:14250]
+fit_netins<-fit_fe[16585:16817]
+fit_acbio<-fit_fe[18866:19098]
+
+fit_volvo_ols<-fit_ols[937:1169]
+fit_hm_ols<-fit_ols[1405:1637]
+fit_nordea_ols<-fit_ols[1639:1871]
+
+fit_sas_ols<-fit_ols[6787:7019]
+fit_enea_ols<-fit_ols[10288:10520]
+fit_haldex_ols<-fit_ols[13082:13314]
+
+fit_semcon_ols<-fit_ols[14018:14250]
+fit_netins_ols<-fit_ols[16585:16817]
+fit_acbio_ols<-fit_ols[18866:19098]
+
+pc_volvo<-df[937:1169,1]
+pc_hm<-df[1405:1637,1]
+pc_nordea<-df[1639:1871,1]
+
+pc_sas<-df[6787:7019,1]
+pc_enea<-df[10288:10520,1]
+pc_haldex<-df[13082:13314,1]
+
+pc_semcon<-df[14018:14250,1]
+pc_netins<-df[16585:16817,1]
+pc_acbio<-df[18866:19098,1]
+
+export_fe<-data.frame(pc_volvo,fit_volvo,pc_hm,fit_hm,pc_nordea,fit_nordea,pc_sas,fit_sas,pc_enea,fit_enea,pc_haldex,fit_haldex,pc_semcon,fit_semcon,pc_netins,fit_netins,pc_acbio,fit_acbio)
+export_ols<-data.frame(pc_volvo,fit_volvo_ols,pc_hm,fit_hm_ols,pc_nordea,fit_nordea_ols,pc_sas,fit_sas_ols,pc_enea,fit_enea_ols,pc_haldex,fit_haldex_ols,pc_semcon,fit_semcon_ols,pc_netins,fit_netins_ols,pc_acbio,fit_acbio_ols)
+library("writexl")
+write_xlsx(export_fe,"plot_fe.xlsx")
+write_xlsx(export_ols,"plot_ols.xlsx")
+
+
+
+ggplot(aug_volvo, aes(x=ind[1:234])) +                    # basic graphical object
+ geom_line(aes(y=.fitted), colour="red") +  # first layer
+  geom_line(aes(y=pc1), colour="blue")+  # second layer
+  labs(x = "Month",y = "Liquidity index")
+
+mf8 <- plm(pc1~UR+VSTOXX+REPO+CBOE, data = df,model="pooling", index=c("ID","Month"))
+summary(mf8)
+
+RSS_full<-sum(residuals(mf8)^2)
+
+mf9 <- plm(pc1~1, data = df,model="within", index=c("ID","Month"))
+summary(mf9)
+coeftest(mf9, vcov=vcovHC(mf9,type="sss",cluster="group"))
+
+RSS_red<-sum(residuals(mf9)^2)
+
+pdc<-(RSS_red-RSS_full)/RSS_red
 
 res<-residuals(mf8)
 df2 <- cbind(as.vector(res), attr(res, "index"))
 names(df2) <- c("resid", "firm", "month")
 
-plot(df2$resid,type = "l")
+plot(df$pc1,type = "l")
 
 
 pred.20 <- data.frame(df, 

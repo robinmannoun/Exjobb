@@ -10,11 +10,11 @@ omxs_monthly_vol = sqrt(omx_daily.GroupCount).*omx_daily.std_R;
 
 makro_omx = omxs_monthly_vol;
 
-for i=1:90
+for i=1:88
     makro_omx = [makro_omx; omxs_monthly_vol];
 end
 
-makro_data = readtable('Makrovariabler_sammanställning_V3.xlsx');
+makro_data = readtable('Makrovariabler_sammanställning_V4.xlsx');
 
 makro_data.GOVERNMENTBONDYIELD_10YEARMATURITIES = str2double(makro_data.GOVERNMENTBONDYIELD_10YEARMATURITIES);
 makro_data.UNEMPLOYMENTRATE = str2double(makro_data.UNEMPLOYMENTRATE);
@@ -25,7 +25,7 @@ makro_data.Date = nbr_months;
 makro_matrix = table2array(makro_data);
 
 stacked_x = makro_matrix;
-for i= 1:90
+for i= 1:88
 
 stacked_x = [stacked_x ;makro_matrix];
 
